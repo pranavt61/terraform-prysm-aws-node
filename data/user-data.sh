@@ -16,7 +16,6 @@ add-apt-repository \
    stable"
 apt-get install -y docker-ce docker-ce-cli containerd.io
 
-groupadd docker
 usermod -aG docker ubuntu
 
 # Install docker-compose
@@ -24,5 +23,6 @@ curl -L "https://github.com/docker/compose/releases/download/1.27.4/docker-compo
 chmod +x /usr/local/bin/docker-compose
 
 su ubuntu
-git clone https://github.com/insight-infrastructure/prysm-docker-compose.git
+git clone https://github.com/insight-infrastructure/prysm-docker-compose.git /home/ubuntu/prysm-docker-compose
 
+echo '${keystore_password}' >> /home/ubuntu/prysm-docker-compose/validator/wallet-password
