@@ -3,6 +3,22 @@
 [![open-issues](https://img.shields.io/github/issues-raw/insight-infrastructure/terraform-aws-prysm-node?style=for-the-badge)](https://github.com/insight-infrastructure/terraform-aws-prysm-node/issues)
 [![open-pr](https://img.shields.io/github/issues-pr-raw/insight-infrastructure/terraform-aws-prysm-node?style=for-the-badge)](https://github.com/insight-infrastructure/terraform-aws-prysm-node/pulls)
 
+> Not ready - WIP
+
+## TODO
+
+- Build test so that endpoint is tested when successfully deployed 
+    - https://github.com/insight-w3f/terraform-polkadot-aws-asg/blob/master/test/terraform_defaults_test.go
+- port lists 
+- ssh into box / manually run user data as root to verify 
+   
+```bash
+cd examples/defaults
+terraform init 
+terraform apply 
+```
+
+
 ## Features
 
 This module...
@@ -30,15 +46,45 @@ No issue is creating limit on this module.
 
 | Name | Version |
 |------|---------|
-| null | n/a |
+| aws | n/a |
 
 ## Inputs
 
-No input.
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:-----:|
+| additional\_security\_group\_ids | List of security groups | `list(string)` | `[]` | no |
+| create | Boolean to create resources or not | `bool` | `true` | no |
+| create\_sg | Bool for create security group | `bool` | `true` | no |
+| instance\_type | Instance type | `string` | `"t3.small"` | no |
+| key\_name | The key pair to import - leave blank to generate new keypair from pub/priv ssh key path | `string` | `""` | no |
+| keystore\_password | n/a | `any` | n/a | yes |
+| minimum\_volume\_size\_map | Map for networks with min volume size | `map(string)` | <pre>{<br>  "mainnet": 10,<br>  "medalla": 10<br>}</pre> | no |
+| name | The name for the label | `string` | `"prep"` | no |
+| network\_name | The network name, ie medalla / mainnet | `string` | n/a | yes |
+| private\_key\_path | The path to the private ssh key | `string` | n/a | yes |
+| private\_port\_cidrs | List of CIDR blocks for private ports | `list(string)` | <pre>[<br>  "172.31.0.0/16"<br>]</pre> | no |
+| private\_tcp\_ports | List of publicly tcp open ports | `list(number)` | <pre>[<br>  9100,<br>  9113,<br>  9115,<br>  8080<br>]</pre> | no |
+| private\_udp\_ports | List of publicly udp open ports | `list(number)` | `[]` | no |
+| public\_key\_path | The path to the public ssh key | `string` | n/a | yes |
+| public\_tcp\_ports | List of publicly open ports | `list(number)` | <pre>[<br>  22,<br>  7100,<br>  9000<br>]</pre> | no |
+| public\_udp\_ports | List of publicly udp open ports | `list(number)` | <pre>[<br>  7100,<br>  9000<br>]</pre> | no |
+| root\_iops | n/a | `string` | n/a | yes |
+| root\_volume\_size | Root volume size | `number` | `8` | no |
+| root\_volume\_type | n/a | `string` | `"gp2"` | no |
+| subnet\_id | The id of the subnet | `string` | `""` | no |
+| tags | Map of tags | `map(string)` | `{}` | no |
+| vpc\_id | Custom vpc id - leave blank for deault | `string` | `""` | no |
 
 ## Outputs
 
-No output.
+| Name | Description |
+|------|-------------|
+| instance\_id | n/a |
+| instance\_type | n/a |
+| key\_name | n/a |
+| network\_name | n/a |
+| public\_ip | n/a |
+| security\_group\_id | n/a |
 
 <!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 
