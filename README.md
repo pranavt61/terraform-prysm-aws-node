@@ -7,17 +7,19 @@
 
 ## TODO
 
-- Build test so that endpoint is tested when successfully deployed 
-    - https://github.com/insight-w3f/terraform-polkadot-aws-asg/blob/master/test/terraform_defaults_test.go
+- Fix deployment (compose error....)
 - port lists 
 - ssh into box / manually run user data as root to verify 
+- Replace keystore with dummy 
+- Build test so that endpoint is tested when successfully deployed 
+    - https://github.com/insight-w3f/terraform-polkadot-aws-asg/blob/master/test/terraform_defaults_test.go
    
 ```bash
 cd examples/defaults
 terraform init 
-terraform apply 
+terraform apply
+terraform destroy  
 ```
-
 
 ## Features
 
@@ -47,6 +49,7 @@ No issue is creating limit on this module.
 | Name | Version |
 |------|---------|
 | aws | n/a |
+| template | n/a |
 
 ## Inputs
 
@@ -57,7 +60,8 @@ No issue is creating limit on this module.
 | create\_sg | Bool for create security group | `bool` | `true` | no |
 | instance\_type | Instance type | `string` | `"t3.small"` | no |
 | key\_name | The key pair to import - leave blank to generate new keypair from pub/priv ssh key path | `string` | `""` | no |
-| keystore\_password | n/a | `any` | n/a | yes |
+| keystore\_password | Password to keystore | `string` | n/a | yes |
+| keystore\_path | Path to keystore | `string` | n/a | yes |
 | minimum\_volume\_size\_map | Map for networks with min volume size | `map(string)` | <pre>{<br>  "mainnet": 10,<br>  "medalla": 10<br>}</pre> | no |
 | name | The name for the label | `string` | `"prep"` | no |
 | network\_name | The network name, ie medalla / mainnet | `string` | n/a | yes |
