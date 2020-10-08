@@ -20,3 +20,4 @@ variable "network_name" {
   description = "The network name, ie medalla / mainnet"
   type        = string
 }
+
