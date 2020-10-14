@@ -25,7 +25,7 @@ variable "root_iops" {
 variable "instance_type" {
   description = "Instance type"
   type        = string
-  default     = "t3.small"
+  default     = "t3.large"
 }
 
 variable "public_key_path" {
@@ -45,23 +45,36 @@ variable "subnet_id" {
   default     = ""
 }
 
-// TODO: Fill out volume size requirements for each network
 variable "minimum_volume_size_map" {
   description = "Map for networks with min volume size "
   type        = map(string)
   default = {
-    mainnet = 10,
-    medalla = 10
+    medalla = 128
   }
 }
 
 variable "keystore_password" {
-  description = "Password to keystore"
+  description = "Password to keystore DEPRICATED"
   type        = string
 }
 
 variable "keystore_path" {
-  description = "Path to keystore"
+  description = "Path to keystore file"
+  type        = string
+}
+
+variable "deposit_path" {
+  description = "Path to deposit file"
+  type        = string
+}
+
+variable "wallets_dir_path" {
+  description = "Path to wallet directory"
+  type        = string
+}
+
+variable "wallet_password_path" {
+  description = "Path to wallet password file"
   type        = string
 }
 
@@ -80,10 +93,7 @@ locals {
 }
 
 data "template_file" "user_data" {
-  template = file("${path.module}/data/user-data.sh")
-  vars = {
-    keystore_password = var.keystore_password
-  }
+  template = file("${path.module}/data/install-docker.sh")
 }
 
 resource "aws_instance" "this" {
@@ -102,7 +112,17 @@ resource "aws_instance" "this" {
   key_name               = var.public_key_path == "" ? var.key_name : aws_key_pair.this.*.key_name[0]
   tags                   = merge({ name = var.name }, local.tags)
 
-  user_data = data.template_file.user_data.rendered
+  user_data = data.template_file.user_data.rendered // yaml
+
+  provisioner "remote-exec" {
+    script = "${path.module}/data/pull-github.sh"
+    connection {
+      type        = "ssh"
+      host        = self.public_ip
+      user        = "ubuntu"
+      private_key = file(var.private_key_path)
+    }
+  }
 
   provisioner "remote-exec" {
     script = "${path.module}/data/wait-for-apt-on-startup.sh"
@@ -114,10 +134,9 @@ resource "aws_instance" "this" {
     }
   }
 
-  provisioner "remote-exec" {
-    inline = [
-      "docker-compose -f /home/ubuntu/prysm-docker-compose/create-account.yaml run validator-import-launchpad"
-    ]
+  provisioner "file" {
+    source      = var.keystore_path
+    destination = "/home/ubuntu/prysm-docker-compose/launchpad/eth2.0-deposit-cli/validator_keys/keystore.json"
     connection {
       type        = "ssh"
       host        = self.public_ip
@@ -127,20 +146,30 @@ resource "aws_instance" "this" {
   }
 
   provisioner "file" {
-    source      = var.keystore_path
-    destination = "/home/ubuntu/prysm-docker-compose/launchpad/eth2.0-deposit-cli/validator_keys/keystore"
+    source      = var.deposit_path
+    destination = "/home/ubuntu/prysm-docker-compose/launchpad/eth2.0-deposit-cli/validator_keys/deposit.json"
     connection {
       type        = "ssh"
       host        = self.public_ip
       user        = "ubuntu"
-      private_key = var.private_key_path
+      private_key = file(var.private_key_path)
     }
   }
 
-  provisioner "remote-exec" {
-    inline = [
-      "docker-compose -f /home/ubuntu/prysm-docker-compose/create-account.yaml run validator-import-launchpad"
-    ]
+  provisioner "file" {
+    source      = var.wallets_dir_path
+    destination = "/home/ubuntu/prysm-docker-compose/validator/"
+    connection {
+      type        = "ssh"
+      host        = self.public_ip
+      user        = "ubuntu"
+      private_key = file(var.private_key_path)
+    }
+  }
+
+  provisioner "file" {
+    source      = var.wallet_password_path
+    destination = "/home/ubuntu/prysm-docker-compose/validator/passwords/wallet-password"
     connection {
       type        = "ssh"
       host        = self.public_ip
@@ -151,7 +180,8 @@ resource "aws_instance" "this" {
 
   provisioner "remote-exec" {
     inline = [
-      "docker-compose -f /home/ubuntu/prysm-docker-compose/docker-compose.yaml"
+      "cd /home/ubuntu/prysm-docker-compose/",
+      "docker-compose up -d"
     ]
     connection {
       type        = "ssh"

@@ -11,38 +11,36 @@ variable "create_sg" {
 }
 
 variable "public_tcp_ports" {
-  description = "List of publicly open ports"
+  description = "List of public TCP ports"
   type        = list(number)
   default = [
     22,
-    7100,
-    9000,
+    30303,
+    13000,
+    9090,
+    3000,
+    8545,
   ]
 }
 
 variable "public_udp_ports" {
-  description = "List of publicly udp open ports"
+  description = "List of public UPD ports"
   type        = list(number)
   default = [
-    7100,
-    9000,
+    30303,
+    12000,
   ]
 }
 
 
 variable "private_tcp_ports" {
-  description = "List of publicly tcp open ports"
+  description = "List of private TCP ports"
   type        = list(number)
-  default = [
-    9100,
-    9113,
-    9115,
-    8080,
-  ]
+  default = []
 }
 
 variable "private_udp_ports" {
-  description = "List of publicly udp open ports"
+  description = "List of private UDP ports"
   type        = list(number)
   default     = []
 }

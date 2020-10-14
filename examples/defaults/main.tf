@@ -9,20 +9,16 @@ provider "aws" {
 variable "private_key_path" {}
 variable "public_key_path" {}
 
-//variable "keystore_path" {
-//  default = ""
-//}
-//locals {
-//  keystore_path = var.keystore_path == "" ? "${path.module}/../../test/fixtures/keystores/keystore-default" : var.keystore_path
-//}
-
 module "defaults" {
-  source            = "../.."
-  network_name      = "medalla"
-  private_key_path  = var.private_key_path
-  public_key_path   = var.public_key_path
-  keystore_password = "ItWorks!!!!1"
-  keystore_path     = "${path.module}/../../test/fixtures/keystores/keystore-default"
+  source                = "../.."
+  network_name          = "medalla"
+  private_key_path      = var.private_key_path
+  public_key_path       = var.public_key_path
+  keystore_password     = "ItWorks!!!!1"
+  keystore_path         = "${path.module}/../../test/fixtures/validator/validator_keys/keystore-default.json"
+  deposit_path          = "${path.module}/../../test/fixtures/validator/validator_keys/deposit-default.json"
+  wallets_dir_path      = "${path.module}/../../test/fixtures/validator/wallets"
+  wallet_password_path  = "${path.module}/../../test/fixtures/validator/passwords/wallet-password"
 }
 
 output "public_ip" {
