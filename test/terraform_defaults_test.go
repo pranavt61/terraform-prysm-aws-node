@@ -95,11 +95,15 @@ func TestTerraformSshExample(t *testing.T) {
   // Create terraform instance
 	terraform.InitAndApply(t, terraformOptions)
 
-  // Run tests
-	testSSHToPublicHost(t, terraformOptions, ec2KeyPair)
+  //--- Run tests ---//
+	testGenericSSHCommand(t, terraformOptions, ec2KeyPair)
+
+  // Docker
+	testDockerInstall(t, terraformOptions, ec2KeyPair)
+	testDockerComposeInstall(t, terraformOptions, ec2KeyPair)
 }
 
-func testSSHToPublicHost(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair) {
+func testGenericSSHCommand(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair) {
 	// Run `terraform output` to get the value of an output variable
 	publicInstanceIP := terraform.Output(t, terraformOptions, "public_ip")
 
@@ -117,8 +121,8 @@ func testSSHToPublicHost(t *testing.T, terraformOptions *terraform.Options, keyP
 	description := fmt.Sprintf("SSH to public host %s", publicInstanceIP)
 
 	// Run a simple echo command on the server
+	command := fmt.Sprintf("echo -n '%s'", "Hello, World")
 	expectedText := "Hello, World"
-	command := fmt.Sprintf("echo -n '%s'", expectedText)
 
 	// Verify that we can SSH to the Instance and run commands
 	retry.DoWithRetry(t, description, maxRetries, timeBetweenRetries, func() (string, error) {
@@ -134,19 +138,257 @@ func testSSHToPublicHost(t *testing.T, terraformOptions *terraform.Options, keyP
 
 		return "", nil
 	})
+}
 
-	// Run a command on the server that results in an error,
-	expectedText = "Hello, World"
-	command = fmt.Sprintf("echo -n '%s' && exit 1", expectedText)
-	description = fmt.Sprintf("SSH to public host %s with error command", publicInstanceIP)
+func testDockerInstall(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair) {
+	// Run `terraform output` to get the value of an output variable
+	publicInstanceIP := terraform.Output(t, terraformOptions, "public_ip")
 
-	// Verify that we can SSH to the Instance, run the command and see the output
+	// We're going to try to SSH to the instance IP, using the Key Pair we created earlier, and the user "ubuntu",
+	// as we know the Instance is running an Ubuntu AMI that has such a user
+	publicHost := ssh.Host{
+		Hostname:    publicInstanceIP,
+		SshKeyPair:  keyPair.KeyPair,
+		SshUserName: "ubuntu",
+	}
+
+	// It can take a minute or so for the Instance to boot up, so retry a few times
+	maxRetries := 30
+	timeBetweenRetries := 5 * time.Second
+	description := "Check docker version on host"
+
+	// Run a simple echo command on the server
+	command := "docker --version"
+	expectedText := "Docker version 19.03.13, build 4484c46d9d"
+
+	// Verify that we can SSH to the Instance and run commands
 	retry.DoWithRetry(t, description, maxRetries, timeBetweenRetries, func() (string, error) {
-
 		actualText, err := ssh.CheckSshCommandE(t, publicHost, command)
 
-		if err == nil {
-			return "", fmt.Errorf("Expected SSH command to return an error but got none")
+		if err != nil {
+			return "", err
+		}
+
+		if strings.TrimSpace(actualText) != expectedText {
+			return "", fmt.Errorf("Expected SSH command to return '%s' but got '%s'", expectedText, actualText)
+		}
+
+		return "", nil
+	})
+}
+
+func testDockerComposeInstall(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair) {
+	// Run `terraform output` to get the value of an output variable
+	publicInstanceIP := terraform.Output(t, terraformOptions, "public_ip")
+
+	// We're going to try to SSH to the instance IP, using the Key Pair we created earlier, and the user "ubuntu",
+	// as we know the Instance is running an Ubuntu AMI that has such a user
+	publicHost := ssh.Host{
+		Hostname:    publicInstanceIP,
+		SshKeyPair:  keyPair.KeyPair,
+		SshUserName: "ubuntu",
+	}
+
+	// It can take a minute or so for the Instance to boot up, so retry a few times
+	maxRetries := 30
+	timeBetweenRetries := 5 * time.Second
+	description := "Check docker-compose version on host"
+
+	// Run a simple echo command on the server
+	command := "docker-compose --version"
+	expectedText := "docker-compose version 1.27.4, build 40524192"
+
+	// Verify that we can SSH to the Instance and run commands
+	retry.DoWithRetry(t, description, maxRetries, timeBetweenRetries, func() (string, error) {
+		actualText, err := ssh.CheckSshCommandE(t, publicHost, command)
+
+		if err != nil {
+			return "", err
+		}
+
+		if strings.TrimSpace(actualText) != expectedText {
+			return "", fmt.Errorf("Expected SSH command to return '%s' but got '%s'", expectedText, actualText)
+		}
+
+		return "", nil
+	})
+}
+
+func testPrysmDockerComposeFilesFromGit(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair) {
+	// Run `terraform output` to get the value of an output variable
+	publicInstanceIP := terraform.Output(t, terraformOptions, "public_ip")
+
+	// We're going to try to SSH to the instance IP, using the Key Pair we created earlier, and the user "ubuntu",
+	// as we know the Instance is running an Ubuntu AMI that has such a user
+	publicHost := ssh.Host{
+		Hostname:    publicInstanceIP,
+		SshKeyPair:  keyPair.KeyPair,
+		SshUserName: "ubuntu",
+	}
+
+	// It can take a minute or so for the Instance to boot up, so retry a few times
+	maxRetries := 30
+	timeBetweenRetries := 5 * time.Second
+	description := "Check for docker-compose files in home dir"
+
+	// Run a simple echo command on the server
+	command := "cd ~/prysm-docker-compose && git remote -v | head -n 1"
+	expectedText := "origin  https://github.com/pranavt61/prysm-docker-compose.git (fetch)"
+
+	// Verify that we can SSH to the Instance and run commands
+	retry.DoWithRetry(t, description, maxRetries, timeBetweenRetries, func() (string, error) {
+		actualText, err := ssh.CheckSshCommandE(t, publicHost, command)
+
+		if err != nil {
+			return "", err
+		}
+
+		if strings.TrimSpace(actualText) != expectedText {
+			return "", fmt.Errorf("Expected SSH command to return '%s' but got '%s'", expectedText, actualText)
+		}
+
+		return "", nil
+	})
+}
+
+func testPrysmKeystoreFileTransfer(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair) {
+	// Run `terraform output` to get the value of an output variable
+	publicInstanceIP := terraform.Output(t, terraformOptions, "public_ip")
+
+	// We're going to try to SSH to the instance IP, using the Key Pair we created earlier, and the user "ubuntu",
+	// as we know the Instance is running an Ubuntu AMI that has such a user
+	publicHost := ssh.Host{
+		Hostname:    publicInstanceIP,
+		SshKeyPair:  keyPair.KeyPair,
+		SshUserName: "ubuntu",
+	}
+
+	// It can take a minute or so for the Instance to boot up, so retry a few times
+	maxRetries := 30
+	timeBetweenRetries := 5 * time.Second
+	description := "Check for keystore.json"
+
+	// Run a simple echo command on the server
+	command := "ls /home/ubuntu/prysm-docker-compose/launchpad/eth2.0-deposit-cli/validator_keys/keystore.json"
+  expectedText := "/home/ubuntu/prysm-docker-compose/launchpad/eth2.0-deposit-cli/validator_keys/keystore.json"
+
+	// Verify that we can SSH to the Instance and run commands
+	retry.DoWithRetry(t, description, maxRetries, timeBetweenRetries, func() (string, error) {
+		actualText, err := ssh.CheckSshCommandE(t, publicHost, command)
+
+		if err != nil {
+			return "", err
+		}
+
+		if strings.TrimSpace(actualText) != expectedText {
+			return "", fmt.Errorf("Expected SSH command to return '%s' but got '%s'", expectedText, actualText)
+		}
+
+		return "", nil
+	})
+}
+
+func testPrysmDepositFileTransfer(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair) {
+	// Run `terraform output` to get the value of an output variable
+	publicInstanceIP := terraform.Output(t, terraformOptions, "public_ip")
+
+	// We're going to try to SSH to the instance IP, using the Key Pair we created earlier, and the user "ubuntu",
+	// as we know the Instance is running an Ubuntu AMI that has such a user
+	publicHost := ssh.Host{
+		Hostname:    publicInstanceIP,
+		SshKeyPair:  keyPair.KeyPair,
+		SshUserName: "ubuntu",
+	}
+
+	// It can take a minute or so for the Instance to boot up, so retry a few times
+	maxRetries := 30
+	timeBetweenRetries := 5 * time.Second
+	description := "Check for deposit.json"
+
+	// Run a simple echo command on the server
+	command := "ls /home/ubuntu/prysm-docker-compose/launchpad/eth2.0-deposit-cli/validator_keys/depost.json"
+  expectedText := "/home/ubuntu/prysm-docker-compose/launchpad/eth2.0-deposit-cli/validator_keys/deposit.json"
+
+	// Verify that we can SSH to the Instance and run commands
+	retry.DoWithRetry(t, description, maxRetries, timeBetweenRetries, func() (string, error) {
+		actualText, err := ssh.CheckSshCommandE(t, publicHost, command)
+
+		if err != nil {
+			return "", err
+		}
+
+		if strings.TrimSpace(actualText) != expectedText {
+			return "", fmt.Errorf("Expected SSH command to return '%s' but got '%s'", expectedText, actualText)
+		}
+
+		return "", nil
+	})
+}
+
+func testPrysmWalletTransfer(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair) {
+	// Run `terraform output` to get the value of an output variable
+	publicInstanceIP := terraform.Output(t, terraformOptions, "public_ip")
+
+	// We're going to try to SSH to the instance IP, using the Key Pair we created earlier, and the user "ubuntu",
+	// as we know the Instance is running an Ubuntu AMI that has such a user
+	publicHost := ssh.Host{
+		Hostname:    publicInstanceIP,
+		SshKeyPair:  keyPair.KeyPair,
+		SshUserName: "ubuntu",
+	}
+
+	// It can take a minute or so for the Instance to boot up, so retry a few times
+	maxRetries := 30
+	timeBetweenRetries := 5 * time.Second
+	description := "Check for deposit.json"
+
+	// Run a simple echo command on the server
+	command := "ls /home/ubuntu/prysm-docker-compose/validator/wallets/hash"
+  expectedText := "/home/ubuntu/prysm-docker-compose/validator/wallets/hash"
+
+	// Verify that we can SSH to the Instance and run commands
+	retry.DoWithRetry(t, description, maxRetries, timeBetweenRetries, func() (string, error) {
+		actualText, err := ssh.CheckSshCommandE(t, publicHost, command)
+
+		if err != nil {
+			return "", err
+		}
+
+		if strings.TrimSpace(actualText) != expectedText {
+			return "", fmt.Errorf("Expected SSH command to return '%s' but got '%s'", expectedText, actualText)
+		}
+
+		return "", nil
+	})
+}
+
+func testPrysmWalletPasswordTransfer(t *testing.T, terraformOptions *terraform.Options, keyPair *aws.Ec2Keypair) {
+	// Run `terraform output` to get the value of an output variable
+	publicInstanceIP := terraform.Output(t, terraformOptions, "public_ip")
+
+	// We're going to try to SSH to the instance IP, using the Key Pair we created earlier, and the user "ubuntu",
+	// as we know the Instance is running an Ubuntu AMI that has such a user
+	publicHost := ssh.Host{
+		Hostname:    publicInstanceIP,
+		SshKeyPair:  keyPair.KeyPair,
+		SshUserName: "ubuntu",
+	}
+
+	// It can take a minute or so for the Instance to boot up, so retry a few times
+	maxRetries := 30
+	timeBetweenRetries := 5 * time.Second
+	description := "Check for deposit.json"
+
+	// Run a simple echo command on the server
+	command := "ls /home/ubuntu/prysm-docker-compose/validator/passwords/wallet-password"
+  expectedText := "/home/ubuntu/prysm-docker-compose/validator/passwords/wallet-password"
+
+	// Verify that we can SSH to the Instance and run commands
+	retry.DoWithRetry(t, description, maxRetries, timeBetweenRetries, func() (string, error) {
+		actualText, err := ssh.CheckSshCommandE(t, publicHost, command)
+
+		if err != nil {
+			return "", err
 		}
 
 		if strings.TrimSpace(actualText) != expectedText {

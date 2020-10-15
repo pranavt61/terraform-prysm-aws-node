@@ -112,7 +112,7 @@ resource "aws_instance" "this" {
   key_name               = var.public_key_path == "" ? var.key_name : aws_key_pair.this.*.key_name[0]
   tags                   = merge({ name = var.name }, local.tags)
 
-  user_data = data.template_file.user_data.rendered // yaml
+  user_data = data.template_file.user_data.rendered
 
   provisioner "remote-exec" {
     script = "${path.module}/data/pull-github.sh"
